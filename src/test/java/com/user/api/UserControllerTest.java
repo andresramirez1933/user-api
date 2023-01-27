@@ -18,6 +18,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -45,22 +46,21 @@ public class UserControllerTest {
     @Value("${sql.script.delete.user}")
     private String sqlDeleteUsers;
 
-    @Value("${sql.script.insert.user1}")
-    private String sqlInsertUser1;
+    @Value("${sql.script.alter.column.id}")
+    private String sqlUpdateUserId;
 
-    @Value("${sql.script.insert.user2}")
-    private String sqlInsertUser2;
     @Autowired
     private JdbcTemplate jdbc;
-
-    @Autowired
-    private User user;
 
     @BeforeEach
     void setup(){
 
-        jdbc.execute(sqlInsertUser1);
-        jdbc.execute(sqlInsertUser2);
+        User user = new User("Andres", "Ramirez", "andres@gmail.com");
+        User user1 = new User("Gloria", "Pardo", "gloria@gmail.com");
+        User user2 = new User("Claudia", "Rodriguez", "claudia@gmail.com");
+
+        userRepository.saveAll(List.of(user, user1, user2));
+
 
     }
 
@@ -70,28 +70,27 @@ public class UserControllerTest {
         mockMvc.perform(MockMvcRequestBuilders.get("/user"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(APPLICATION_JSON_UTF8))
-                .andExpect(jsonPath("$", hasSize(2)));
+                .andExpect(jsonPath("$", hasSize(3)));
 
-
-        userRepository.findAll().forEach(user -> System.out.println(user.getId() + " " +  user.getFirstname()));
 
     }
 
    @Test
     public void registerUserTest() throws Exception{
 
-        user.setFirstname("Luisa");
-        user.setLastname("Ramirez");
-        user.setEmail("luisa@gmail.com");
+        User user1 = new User();
+        user1.setFirstname("Luisa");
+        user1.setLastname("Ramirez");
+        user1.setEmail("luisa@gmail.com");
 
 
         mockMvc.perform(post("/user")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(user)))
+                .content(objectMapper.writeValueAsString(user1)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.firstname",is(user.getFirstname())))
-                .andExpect(jsonPath("$.lastname", is(user.getLastname())))
-                .andExpect(jsonPath("$.email", is(user.getEmail())));
+                .andExpect(jsonPath("$.firstname",is(user1.getFirstname())))
+                .andExpect(jsonPath("$.lastname", is(user1.getLastname())))
+                .andExpect(jsonPath("$.email", is(user1.getEmail())));
 
         userRepository.findAll().forEach(user -> System.out.println(user.getId() + " " +  user.getFirstname()));
 
@@ -100,34 +99,29 @@ public class UserControllerTest {
     @Test
     void deleteUserTest() throws Exception{
 
-        List<User> users = userRepository.findAll();
+        assertTrue(userRepository.findById(1).isPresent());
 
-        assertNotNull(users.get(0));
-        int id = users.get(0).getId();
-
-        mockMvc.perform(delete("/user/{id}",id))
+        mockMvc.perform(delete("/user/{id}",1))
                 .andExpect(status().isOk());
 
-        assertFalse(userRepository.findById(id).isPresent());
+        assertFalse(userRepository.findById(1).isPresent());
 
     }
 
     @Test
     void getStudentById() throws Exception{
 
-        List<User> users = userRepository.findAll();
 
-        assertNotNull(users.get(0));
-        User user = users.get(0);
+        Optional<User> user = userRepository.findById(1);
 
-        assertTrue(userRepository.findById(user.getId()).isPresent());
+        assertTrue(user.isPresent());
 
-        mockMvc.perform(get("/user/{id}", user.getId()))
+        mockMvc.perform(get("/user/{id}", 1))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.firstname", is(user.getFirstname())))
-                .andExpect(jsonPath("$.lastname", is(user.getLastname())))
-                .andExpect(jsonPath("$.email", is(user.getEmail())));
+                .andExpect(jsonPath("$.firstname", is(user.get().getFirstname())))
+                .andExpect(jsonPath("$.lastname", is(user.get().getLastname())))
+                .andExpect(jsonPath("$.email", is(user.get().getEmail())));
     }
 
     @Test
@@ -148,16 +142,11 @@ public class UserControllerTest {
 
         User updatedUser = new User("Carlos", "Mendez", "carlos@gmail.com");
 
-        List<User> users = userRepository.findAll();
-
-        assertNotNull(users.get(0));
-        User user = users.get(0);
-
-        mockMvc.perform(put("/user/{id}",user.getId())
+        mockMvc.perform(put("/user/{id}",1)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updatedUser)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id", is(user.getId())))
+                .andExpect(jsonPath("$.id", is(1)))
                 .andExpect(jsonPath("$.firstname", is("Carlos")))
                 .andExpect(jsonPath("$.lastname", is("Mendez")))
                 .andExpect(jsonPath("$.email", is("carlos@gmail.com")));
@@ -178,6 +167,8 @@ public class UserControllerTest {
     void setupAfterEach(){
 
         jdbc.execute(sqlDeleteUsers);
+        jdbc.execute(sqlUpdateUserId);
+
     }
 
 
