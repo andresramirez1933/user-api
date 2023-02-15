@@ -18,9 +18,6 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
-    @PersistenceContext
-    private EntityManager entityManager;
-
 
     public List<User> getAllUsers(){
 
@@ -37,21 +34,17 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
 
-
-
-
-
         return savedUser;
     }
 
-    public User getUserById(int id){
+    public User getUserById(Long id){
 
         User user = userRepository.findById(id).orElseThrow(() -> new ResourceNotFound("User not found"));
 
         return user;
     }
 
-    public User updateUser(int id, User user){
+    public User updateUser(Long id, User user){
 
         User userFound = userRepository.findById(id).orElseThrow(() -> new ResourceNotFound("User not found"));
 
@@ -64,7 +57,7 @@ public class UserService {
         return userUpdated;
     }
 
-    public void deleteUser(int id){
+    public void deleteUser(Long id){
 
         User userFound = userRepository.findById(id).orElseThrow(() -> new ResourceNotFound("User not found"));
 
